@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM'lerden Ajan-Temelli Yapay Zekaya: Tam Evrim</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+        :root {
+            --bg-color: #f0f2f5;
+            --card-llm: #4682B4; /* SteelBlue */
+            --card-genai: #3CB371; /* MediumSeaGreen */
+            --card-agents: #FFA500; /* Orange */
+            --card-agentic: #8A2BE2; /* BlueViolet */
+            --text-color: #333;
+            --white-color: #fff;
+            --shadow-light: rgba(0, 0, 0, 0.08);
+            --shadow-hover: rgba(0, 0, 0, 0.15);
+            --modal-bg: rgba(0, 0, 0, 0.6);
+            --border-radius: 16px;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px 20px;
+            position: relative;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            color: #7f8c8d;
+            margin-top: 10px;
+        }
+
+        .lang-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--white-color);
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .lang-toggle:hover {
+            background-color: #f5f5f5;
+            box-shadow: 0 4px 8px var(--shadow-light);
+        }
+
+        .container {
+            flex: 1;
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+            align-items: stretch;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card {
+            background: var(--white-color);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: 0 8px 16px var(--shadow-light);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            border-top: 6px solid;
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px var(--shadow-hover);
+        }
+
+        .card-llm { border-color: var(--card-llm); }
+        .card-genai { border-color: var(--card-genai); }
+        .card-agents { border-color: var(--card-agents); }
+        .card-agentic { border-color: var(--card-agentic); }
+
+        .card h2 {
+            margin: 0 0 20px;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .card ul {
+            list-style: none;
+            padding: 0;
+            margin: auto 0 0;
+        }
+
+        .card li {
+            position: relative;
+            padding: 12px 0;
+            font-size: 0.95rem;
+            font-weight: 500;
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+
+        .card li:not(:last-child)::after {
+            content: '↓';
+            display: block;
+            margin-top: 8px;
+            color: #ddd;
+            font-size: 1rem;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: var(--modal-bg);
+            backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.open {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background-color: var(--white-color);
+            margin: 5% auto;
+            padding: 40px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: relative;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: fadeIn 0.4s ease-out;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+
+        .modal.open .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-close {
+            color: #aaa;
+            position: absolute;
+            top: 15px;
+            right: 25px;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .modal-close:hover {
+            color: var(--text-color);
+        }
+        
+        .modal-content h2 {
+            font-size: 2.2rem;
+            margin-top: 0;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .modal-step {
+            margin-top: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 10px var(--shadow-light);
+            background: #fafafa;
+            overflow: hidden;
+            transition: box-shadow 0.3s ease;
+        }
+        
+        .modal-step:hover {
+            box-shadow: 0 4px 15px var(--shadow-hover);
+        }
+
+        .step-header {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            background: #eef1f5;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--text-color);
+            transition: background 0.3s ease;
+        }
+        
+        .step-header:hover {
+            background: #e0e4eb;
+        }
+
+        .step-header .icon {
+            font-size: 1.5rem;
+            margin-right: 15px;
+            transition: transform 0.3s ease;
+        }
+        
+        .step-header .arrow {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .modal-step.active .step-header .arrow {
+            transform: rotate(180deg);
+        }
+        
+        .modal-step.active .step-content {
+            max-height: 2000px; /* Large enough to accommodate all content */
+            padding: 20px;
+        }
+
+        .step-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out, padding 0.5s ease-out;
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .content-box {
+            background: var(--white-color);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .content-box h3 {
+            margin-top: 0;
+            color: var(--card-llm); /* default color, will be updated */
+            font-weight: 600;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .demo-area {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .demo-area .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .demo-area input, .demo-area button {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .demo-area input {
+            flex: 1;
+            font-size: 1rem;
+        }
+        
+        .demo-area button {
+            cursor: pointer;
+            background: var(--card-llm);
+            color: var(--white-color);
+            border: none;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+        
+        .demo-area button:hover {
+            opacity: 0.9;
+        }
+        
+        .demo-output {
+            background: #eef7ff;
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 40px;
+            border: 1px dashed var(--card-llm);
+            font-style: italic;
+            color: #555;
+            transition: all 0.5s ease;
+        }
+        
+        /* Footer Styles */
+        footer {
+            text-align: center;
+            padding: 30px;
+            border-top: 1px solid #e0e0e0;
+            background: var(--white-color);
+            margin-top: auto;
+        }
+
+        footer p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #777;
+        }
+
+        footer a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            color: #2980b9;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2rem;
+            }
+
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .lang-toggle {
+                top: 10px;
+                right: 10px;
+                padding: 4px 8px;
+            }
+            
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+            }
+
+            .modal-close {
+                font-size: 28px;
+                top: 10px;
+                right: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="main-title">LLM'lerden Ajan-Temelli Yapay Zekaya: Tam Evrim</h1>
+        <p id="main-subtitle">Yapay zeka paradigmasında zengin ve interaktif bir yolculuk.</p>
+        <button class="lang-toggle" id="lang-toggle">EN / TR</button>
+    </header>
+
+    <div class="container" id="card-container">
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="modal-close">&times;</span>
+            <div id="modal-body">
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p id="footer-text">
+            Portal AI'Han Academy tarafından
+            <a href="https://www.linkedin.com/in/ayhanbozkurt/" target="_blank">Ayhan Bozkurt</a> işbirliğiyle geliştirilmiştir.
+        </p>
+        <p>
+            <a href="https://github.com/ayhanbzkrt" target="_blank">GitHub Reposu</a>
+        </p>
+    </footer>
+
+    <script>
+        const contentData = {
+            en: {
+                title: "LLMs to Agentic AI: The Full Evolution",
+                subtitle: "A rich and interactive journey through the AI paradigm shift.",
+                footer: "Portal developed by AI'Han Academy in collaboration with",
+                github: "GitHub Repository",
+                close: "Close",
+                example: "Example",
+                demo: "Interactive Demo",
+                cards: {
+                    llm: {
+                        title: "Large Language Models (LLM)",
+                        intro: "A Large Language Model (LLM) is a neural network pre-trained on a massive amount of text data. Its primary function is to predict the next token (word/subword) in a sequence. It’s a passive, single-turn system, acting as a powerful but static knowledge base.",
+                        steps: [
+                            {
+                                id: "llm-1",
+                                name: "Cloud Provider Selection",
+                                icon: "☁️",
+                                details: {
+                                    title: "Cloud Provider Selection",
+                                    desc: "Choosing a cloud provider (e.g., AWS, Azure, Google Cloud) is the first step. It determines the underlying infrastructure, available APIs, and service integration for deploying and scaling the LLM. It's the digital foundation upon which the model operates.",
+                                    examples: [
+                                        "A startup chooses AWS to use Amazon Bedrock for quick access to models, prioritizing speed and flexibility.",
+                                        "A large corporation selects Azure to leverage its existing infrastructure and security protocols with Azure OpenAI Service, focusing on enterprise-grade integration."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "llm-2",
+                                name: "Tokenization & Embedding",
+                                icon: "🔠",
+                                details: {
+                                    title: "Tokenization & Embedding",
+                                    desc: "Text is broken down into smaller units called tokens (words, subwords, characters). Each token is then converted into a numerical vector (embedding) that captures its semantic meaning, allowing the model to process it mathematically. Think of it as translating human language into a language the AI can understand.",
+                                    examples: [
+                                        "The sentence 'The cat sat on the mat' is tokenized into ['The', 'cat', 'sat', 'on', 'the', 'mat'].",
+                                        "The token 'king' and 'prince' have similar vector representations, reflecting their related meanings and semantic closeness."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "llm-3",
+                                name: "Context Understanding",
+                                icon: "🧠",
+                                details: {
+                                    title: "Context Understanding",
+                                    desc: "The model uses the sequence of embeddings to understand the input's context. Its internal attention mechanisms, a key component of the transformer architecture, weigh the importance of each token relative to others, helping it grasp nuances and relationships.",
+                                    examples: [
+                                        "Given 'I went to the bank to deposit...', the model gives high importance to 'deposit' to understand that 'bank' refers to a financial institution, not a river bank.",
+                                        "A model reads a legal document and uses its attention mechanism to prioritize keywords like 'clause' and 'liability' to grasp the document's core context."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "llm-4",
+                                name: "Neural Interface",
+                                icon: "🔗",
+                                details: {
+                                    title: "Neural Interface (Transformer Core)",
+                                    desc: "This refers to the core of the LLM itself—the massive neural network (transformers) with billions of parameters. It processes the contextual embeddings through multiple layers to generate an output. It’s the computational engine, often referred to as the 'black box' where the magic happens.",
+                                    examples: [
+                                        "A user asks a question, and the neural interface calculates the probability distribution for the next token based on the input context, drawing on its vast pre-trained knowledge.",
+                                        "This is the 'black box' where billions of parameters are used to generate the response, connecting seemingly unrelated concepts and facts to form a coherent reply."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "llm-5",
+                                name: "Token Prediction",
+                                icon: "🎯",
+                                details: {
+                                    title: "Token Prediction",
+                                    desc: "At this stage, the LLM predicts the single most likely token to follow the current sequence. This is a probabilistic process, and the model selects the token with the highest probability from its vocabulary. It's an auto-completion system on a massive scale.",
+                                    examples: [
+                                        "Input: 'What is the capital of France?' The model predicts 'Paris' as the next token with a very high probability.",
+                                        "A creative writing prompt like 'Once upon a time...' leads the model to predict 'there' or 'a' as the most probable next token."
+                                    ],
+                                    demo: true
+                                }
+                            },
+                            {
+                                id: "llm-6",
+                                name: "Output Construction",
+                                icon: "🏗️",
+                                details: {
+                                    title: "Output Construction",
+                                    desc: "The predicted token is appended to the sequence, and the process repeats. The model continues to predict one token at a time until a stop condition (like a period or a special token) is met. This iterative, token-by-token process builds the full response.",
+                                    examples: [
+                                        "Initial: 'The capital of France is '",
+                                        "Step 1: The model predicts 'Paris'.",
+                                        "Step 2: The model predicts '.'. The process stops."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "llm-7",
+                                name: "Feedback",
+                                icon: "🔄",
+                                details: {
+                                    title: "Feedback Loop",
+                                    desc: "The final step involves the human user providing feedback on the generated output. This feedback is crucial for model refinement, often through Reinforcement Learning from Human Feedback (RLHF), which helps align the model's behavior with human preferences and safety guidelines.",
+                                    examples: [
+                                        "A user gives a thumbs-up or thumbs-down on the response, helping the model learn what is considered 'good' or 'bad'.",
+                                        "A human annotator provides a corrected, more helpful response for a training dataset, teaching the model better conversational patterns."
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    genai: {
+                        title: "Generative AI",
+                        intro: "Generative AI takes LLMs a step further by focusing on the creation of high-quality, long-form content. It’s about turning a broad prompt into a complete, coherent, and often creative output. Unlike simple LLMs, it's designed to generate a full artifact from a prompt.",
+                        steps: [
+                            {
+                                id: "genai-1",
+                                name: "Input Collection",
+                                icon: "✍️",
+                                details: {
+                                    title: "Input Collection",
+                                    desc: "This is the initial user prompt. Unlike simple LLM inputs, this is often more structured, involving specific requirements, context, and desired output format (e.g., 'Write me a short story in the style of Edgar Allan Poe').",
+                                    examples: [
+                                        "A user provides a prompt like: 'Write a blog post about the benefits of remote work, focusing on productivity and collaboration.'",
+                                        "An artist inputs a text prompt into an image generator: 'a watercolor painting of a futuristic city with flying cars.'"
+                                    ]
+                                }
+                            },
+                            {
+                                id: "genai-2",
+                                name: "Feature Mapping",
+                                icon: "🗺️",
+                                details: {
+                                    title: "Feature Mapping",
+                                    desc: "The system analyzes the input to identify key features and entities. It maps these to the model's internal representation space, determining the style, tone, and constraints of the desired output. This is the blueprint for the generation process.",
+                                    examples: [
+                                        "For the blog post prompt, the model identifies keywords like 'blog post', 'remote work', 'productivity', and 'collaboration' and their relationships.",
+                                        "In an image prompt, it maps 'watercolor' to a specific artistic style and 'futuristic city' to a set of visual concepts, translating abstract ideas into data points."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "genai-3",
+                                name: "Pattern Learning",
+                                icon: "📊",
+                                details: {
+                                    title: "Pattern Learning",
+                                    desc: "The generative model leverages the patterns it learned during its extensive training on diverse datasets. It recognizes how certain features (e.g., blog post structure, persuasive tone) are correlated with specific outputs and applies this knowledge to create a new piece of content.",
+                                    examples: [
+                                        "The model recalls the typical structure of a blog post (introduction, body paragraphs, conclusion) to organize the output.",
+                                        "It knows that a 'persuasive tone' requires using words like 'discover', 'imagine', and 'transform', and structures the language accordingly."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "genai-4",
+                                name: "Leverage Trained Models",
+                                icon: "🚀",
+                                details: {
+                                    title: "Leverage Trained Models",
+                                    desc: "This stage is the core generation process, where the pre-trained LLM is used to generate a full draft. This is where it goes beyond single token prediction to create a coherent, multi-paragraph or multi-sentence response, building on the initial prompt and its learned patterns.",
+                                    examples: [
+                                        "The model generates a full article draft based on the identified features, flowing from one idea to the next.",
+                                        "An image model generates a full image from the text prompt, blending different artistic styles and objects as requested."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "genai-5",
+                                name: "Content Generation",
+                                icon: "✨",
+                                details: {
+                                    title: "Content Generation",
+                                    desc: "The model iteratively generates the content, building on its previous tokens. This is where the creative output takes shape, from the first sentence of an email to the final paragraph of a report. The process is guided by the internal state of the model and the features identified in the input.",
+                                    examples: [
+                                        "The model starts with an introduction, then moves to a section on 'Productivity Benefits', then 'Collaboration Tools', and finally a summary, all in one seamless process.",
+                                        "A user asks for a summary of a document, and the model generates a concise, readable abstract by condensing key information."
+                                    ],
+                                    demo: true
+                                }
+                            },
+                            {
+                                id: "genai-6",
+                                name: "Refinement & Filtering",
+                                icon: "🧹",
+                                details: {
+                                    title: "Refinement & Filtering",
+                                    desc: "After the initial generation, the output is reviewed to ensure it meets quality standards. This can involve checks for coherence, grammar, and alignment with the prompt's constraints. It may also filter for inappropriate or biased content, a critical step for safety and ethical deployment.",
+                                    examples: [
+                                        "The model's output is checked for grammatical errors and awkward phrasing, and corrected if necessary.",
+                                        "A safety filter scans the generated text for any harmful or biased content before presenting it to the user, ensuring a safe and responsible output."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "genai-7",
+                                name: "User Feedback",
+                                icon: "👍",
+                                details: {
+                                    title: "User Feedback Loop",
+                                    desc: "Just like with LLMs, user feedback is vital. Generative AI systems often provide options for users to rate outputs, refine them, or suggest edits. This feedback is used to further fine-tune the model and improve its performance on specific tasks.",
+                                    examples: [
+                                        "A user clicks a 'rewrite' button to get a different version of a paragraph that feels more natural.",
+                                        "A designer provides a detailed critique of an AI-generated image, specifying what to change in the next iteration, which helps the model learn to produce better art."
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    agents: {
+                        title: "AI Agents",
+                        intro: "AI Agents are a paradigm shift. They move beyond a single-turn prompt-response loop. They can plan, execute, and iterate to achieve a specific task using external tools. An agent is a system with the ability to reason, act, and observe its environment to achieve a goal.",
+                        steps: [
+                            {
+                                id: "agents-1",
+                                name: "Task Triggered",
+                                icon: "▶️",
+                                details: {
+                                    title: "Task Triggered",
+                                    desc: "An AI Agent's process begins when it receives a specific task or a user command that requires multiple steps to complete. This is the 'call to action' for the agent, initiating a complex workflow.",
+                                    examples: [
+                                        "User input: 'Find me the cheapest flights from New York to London for next month.' This is a clear, multi-step task.",
+                                        "User input: 'Create a social media post about our new product launch.' This requires research, content generation, and scheduling."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agents-2",
+                                name: "Intent Detection",
+                                icon: "🔍",
+                                details: {
+                                    title: "Intent Detection",
+                                    desc: "The agent first analyzes the user's input to understand the core intent. It breaks down the command into a structured goal and identifies key parameters (e.g., origin, destination, date range). This is a crucial first step for planning.",
+                                    examples: [
+                                        "For the flight request, the agent identifies the intent as 'find flights' and extracts parameters: 'origin=NYC', 'destination=London', 'dates=next month'.",
+                                        "For the social media post, the intent is 'create content' with parameters 'product=new_product', 'platform=social_media'."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agents-3",
+                                name: "Understand Task Type",
+                                icon: "📝",
+                                details: {
+                                    title: "Understand Task Type",
+                                    desc: "Based on the intent, the agent categorizes the task (e.g., data retrieval, content creation, scheduling). This categorization informs which external tools it needs to use to complete the task.",
+                                    examples: [
+                                        "A flight request is classified as a 'data retrieval & comparison' task, which requires an API call to a flight booking service.",
+                                        "A scheduling request is classified as a 'scheduling & API integration' task, necessitating a connection to a calendar service."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agents-4",
+                                name: "Role / Model Execution",
+                                icon: "🎭",
+                                details: {
+                                    title: "Role / Model Execution",
+                                    desc: "The agent 'assumes a role' or calls a specific model tailored for the task type. For example, it might use a specialized sub-model for generating search queries, for summarizing long texts, or for creating engaging headlines.",
+                                    examples: [
+                                        "For the flight search, the agent uses a search query generation model to create a valid API request string like `api/flights?from=NYC&to=LON&date=2025-09`.",
+                                        "For the social media post, it uses a content generation model with a 'social media manager' persona, ensuring the tone is appropriate for the platform."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agents-5",
+                                name: "Tool or API Call",
+                                icon: "⚙️",
+                                details: {
+                                    title: "Tool or API Call",
+                                    desc: "This is a core capability of an agent. Instead of just generating text, it calls an external tool or API (e.g., a flight search API, a calendar API, a web scraper) to perform a real-world action and gather information. It's the bridge between the digital and physical world.",
+                                    examples: [
+                                        "The agent executes a cURL command to a flight database API with the extracted parameters.",
+                                        "It calls a web search tool to find the latest product information before writing the social media post."
+                                    ],
+                                    demo: true
+                                }
+                            },
+                            {
+                                id: "agents-6",
+                                name: "Interact with Tools",
+                                icon: "🤝",
+                                details: {
+                                    title: "Interact with Tools",
+                                    desc: "The agent processes the result from the tool call. This may involve reading JSON data from an API, parsing HTML from a website, or understanding the output of another model. It's a continuous loop of calling tools and processing results until the goal is met.",
+                                    examples: [
+                                        "The agent receives a JSON response from the flight API, containing a list of flights, prices, and layovers. It then extracts the relevant data to formulate a response.",
+                                        "It reads a CSV file to retrieve product sales data before creating a sales report summary."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agents-7",
+                                name: "Response Handling",
+                                icon: "📤",
+                                details: {
+                                    title: "Response Handling",
+                                    desc: "After gathering all necessary information, the agent synthesizes the results into a human-readable response. It formats the data clearly and presents it to the user in a way that is both concise and comprehensive.",
+                                    examples: [
+                                        "The agent takes the list of flights and presents them in a formatted list: 'Here are the cheapest flights: [Flight 1], [Flight 2]...'.",
+                                        "It composes the final social media post from the gathered product details, ensuring the message is engaging and on-brand."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agents-8",
+                                name: "Task Logging",
+                                icon: "📜",
+                                details: {
+                                    title: "Task Logging",
+                                    desc: "Agents often maintain a log of their actions, including the initial prompt, the tools they called, the parameters used, and the final output. This is crucial for debugging, auditing, and continuous improvement, providing a transparent record of the agent's decision-making process.",
+                                    examples: [
+                                        "The agent records the entire search process: 'Called flight API -> Received data -> Filtered by price -> Generated response.'",
+                                        "A user's past queries and the agent's actions are stored for future reference and personalization, allowing the agent to learn from past interactions."
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    agentic: {
+                        title: "Agentic AI",
+                        intro: "Agentic AI represents the highest level of autonomy. It is not just about executing a single task; it's about initiating a goal, continuously monitoring progress, and autonomously adapting to achieve it. It's a self-correcting, goal-oriented system.",
+                        steps: [
+                            {
+                                id: "agentic-1",
+                                name: "Goal Initiation",
+                                icon: "🏁",
+                                details: {
+                                    title: "Goal Initiation",
+                                    desc: "Unlike a simple task trigger, Agentic AI begins with a high-level, often vague, goal. The agent is responsible for breaking this down into a series of actionable, concrete sub-tasks. It's the difference between 'find flights' and 'manage my travel'.",
+                                    examples: [
+                                        "Goal: 'Grow our online presence.' This is a long-term, multi-faceted objective.",
+                                        "Goal: 'Improve customer satisfaction.' This requires a proactive, continuous approach."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agentic-2",
+                                name: "Receive or Define Objective",
+                                icon: "🎯",
+                                details: {
+                                    title: "Receive or Define Objective",
+                                    desc: "The agent refines the high-level goal into a measurable objective. It might ask for clarification or use its knowledge to set a specific target (e.g., 'Increase website traffic by 15% in Q4'). This turns an abstract idea into a concrete metric.",
+                                    examples: [
+                                        "For 'Grow our online presence', the agent defines the objective: 'Achieve 1000 new followers on Twitter in Q3 by posting 3 times a day.'",
+                                        "It defines 'Improve customer satisfaction' as 'Reduce average customer support response time to under 1 hour by automating common queries.'"
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agentic-3",
+                                name: "Understand Context",
+                                icon: "🌐",
+                                details: {
+                                    title: "Understand Context",
+                                    desc: "The agent ingests and analyzes a wide range of real-time data to fully understand the current situation. This includes internal data (website analytics, sales data), market trends, competitor activity, and user behavior. It's a continuous, 360-degree view of its environment.",
+                                    examples: [
+                                        "The agent analyzes website analytics, social media mentions, and recent sales data to identify current performance.",
+                                        "It reads news articles and industry reports to understand the competitive landscape and identify new opportunities or threats."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agentic-4",
+                                name: "Reasoning",
+                                icon: "🤔",
+                                details: {
+                                    title: "Reasoning (Planning & Strategy)",
+                                    desc: "This is the core of Agentic AI. The agent uses its understanding of the context to reason about the best course of action. It generates a multi-step, dynamic plan, anticipating potential issues and outlining contingencies. This is a higher-level function than a simple task breakdown.",
+                                    examples: [
+                                        "For the Twitter follower goal, the agent reasons: 'My plan is to find trending topics, draft 20 engaging posts, and schedule them. I'll also monitor engagement and if it's low, I'll switch to a video content strategy.'",
+                                        "The agent identifies a support backlog and reasons that the best plan is to 'Create automated FAQ responses and prioritize urgent tickets based on keyword analysis.'"
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agentic-5",
+                                name: "Autonomous Execution",
+                                icon: "🤖",
+                                details: {
+                                    title: "Autonomous Execution",
+                                    desc: "The agent executes the plan without human intervention. It calls tools, interacts with APIs, and performs actions on its own, managing the entire workflow from start to finish. This is where it goes from being a 'helper' to being a true 'doer'.",
+                                    examples: [
+                                        "The agent writes the social media posts, connects to a scheduler API (like Hootsuite), and automatically publishes the content at optimal times.",
+                                        "It uses a support ticketing API to create and send automated responses to common queries, freeing up human agents for complex issues."
+                                    ],
+                                    demo: true
+                                }
+                            },
+                            {
+                                id: "agentic-6",
+                                name: "Realtime Monitoring",
+                                icon: "📊",
+                                details: {
+                                    title: "Realtime Monitoring",
+                                    desc: "The agent continuously monitors key performance indicators (KPIs) in real-time. It doesn't just execute the plan and stop; it watches the results to see if the plan is working. It's a proactive, continuous feedback loop.",
+                                    examples: [
+                                        "It tracks the number of new followers on Twitter hour by hour, and the number of retweets and likes for each post.",
+                                        "It monitors the average support ticket response time and the number of tickets closed daily, comparing it against the defined objective."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agentic-7",
+                                name: "Outcome Evaluation & Adaptation",
+                                icon: "✅",
+                                details: {
+                                    title: "Outcome Evaluation & Adaptation",
+                                    desc: "Based on the monitoring data, the agent evaluates whether the objective is being met. If the outcome is not as expected, it can autonomously go back to the reasoning stage, replan, and try a new approach. This self-correction is what makes it truly 'agentic'.",
+                                    examples: [
+                                        "If followers aren't increasing, the agent re-evaluates: 'My initial content strategy isn't working. I will now try a new approach focusing on video content and sponsored posts.'",
+                                        "If the response time is still too slow, the agent might decide to re-route certain ticket types to specific teams or automate more of the response process."
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            tr: {
+                title: "LLM'lerden Ajan-Temelli Yapay Zekaya: Tam Evrim",
+                subtitle: "Yapay zeka paradigmasında zengin ve interaktif bir yolculuk.",
+                footer: "Portal AI'Han Academy tarafından",
+                github: "GitHub Reposu",
+                close: "Kapat",
+                example: "Örnek",
+                demo: "İnteraktif Demo",
+                cards: {
+                    llm: {
+                        title: "Büyük Dil Modelleri (LLM)",
+                        intro: "Büyük Dil Modeli (LLM), devasa metin verileri üzerinde önceden eğitilmiş bir sinir ağıdır. Birincil işlevi, bir dizideki bir sonraki jetonu (kelime/alt kelime) tahmin etmektir. Güçlü ancak statik bir bilgi bankası gibi davranan, pasif, tek seferlik bir sistemdir.",
+                        steps: [
+                            {
+                                id: "llm-1",
+                                name: "Bulut Sağlayıcı Seçimi",
+                                icon: "☁️",
+                                details: {
+                                    title: "Bulut Sağlayıcı Seçimi",
+                                    desc: "Bulut sağlayıcı (örn. AWS, Azure, Google Cloud) seçimi ilk adımdır. Bu, temel altyapıyı, mevcut API'leri ve LLM'yi dağıtmak ve ölçeklendirmek için hizmet entegrasyonunu belirler. Modelin üzerinde çalıştığı dijital temeldir.",
+                                    examples: [
+                                        "Bir startup, hız ve esnekliği önceliklendirerek modellere hızlı erişim için Amazon Bedrock'u kullanmak üzere AWS'yi seçer.",
+                                        "Büyük bir şirket, mevcut altyapısından ve güvenlik protokollerinden Azure OpenAI Hizmeti ile yararlanmak için Azure'u seçer ve kurumsal düzeyde entegrasyona odaklanır."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "llm-2",
+                                name: "Tokenizasyon & Gömme",
+                                icon: "🔠",
+                                details: {
+                                    title: "Tokenizasyon & Gömme (Embedding)",
+                                    desc: "Metin, jeton (token) adı verilen daha küçük birimlere (kelimeler, alt kelimeler, karakterler) ayrılır. Her bir jeton daha sonra anlamsal anlamını yakalayan sayısal bir vektöre (gömme) dönüştürülür ve modelin onu matematiksel olarak işlemesini sağlar. Bunu, insan dilini yapay zekanın anlayabileceği bir dile çevirmek olarak düşünebilirsiniz.",
+                                    examples: [
+                                        "'Kedi minderin üzerine oturdu' cümlesi ['Kedi', 'minder', 'üzerine', 'oturdu'] olarak tokenize edilir.",
+                                        "'Kral' ve 'prens' jetonları, ilgili anlamlarını ve anlamsal yakınlıklarını yansıtan benzer vektör temsillerine sahiptir."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "llm-3",
+                                name: "Bağlam Anlama",
+                                icon: "🧠",
+                                details: {
+                                    title: "Bağlam Anlama",
+                                    desc: "Model, girdinin bağlamını anlamak için gömme dizisini kullanır. Transformer mimarisinin önemli bir bileşeni olan dahili dikkat mekanizmaları, her jetonun diğerlerine göre önemini tartarak nüansları ve ilişkileri kavramasına yardımcı olur.",
+                                    examples: [
+                                        "'Para yatırmak için bankaya gittim...' ifadesi verildiğinde, model 'yatırmak' kelimesine yüksek önem vererek 'banka'nın bir finans kurumu olduğunu anlar.",
+                                        "Bir model yasal bir belgeyi okur ve belgenin temel bağlamını kavramak için 'madde' ve 'yükümlülük' gibi anahtar kelimelere öncelik vermek için dikkat mekanizmasını kullanır."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "llm-4",
+                                name: "Nöral Arayüz",
+                                icon: "🔗",
+                                details: {
+                                    title: "Nöral Arayüz (Transformer Çekirdeği)",
+                                    desc: "Bu, LLM'nin kendisinin çekirdeğine atıfta bulunur; milyarlarca parametreye sahip devasa sinir ağı (transformerler). Bağlamsal gömmeleri birden fazla katman aracılığıyla işleyerek bir çıktı oluşturur. Bu, modelin hesaplama motorudur ve genellikle 'sihrin gerçekleştiği kara kutu' olarak adlandırılır.",
+                                    examples: [
+                                        "Bir kullanıcı bir soru sorduğunda, nöral arayüz, geniş önceden eğitilmiş bilgisini kullanarak girdi bağlamına göre bir sonraki jeton için olasılık dağılımını hesaplar.",
+                                        "Burası, milyarlarca parametrenin tutarlı bir yanıt oluşturmak için kullanıldığı, görünüşte ilgisiz kavramları ve gerçekleri birbirine bağladığı 'kara kutudur'."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "llm-5",
+                                name: "Jeton Tahmini",
+                                icon: "🎯",
+                                details: {
+                                    title: "Jeton (Token) Tahmini",
+                                    desc: "Bu aşamada, LLM mevcut diziyi takip etmesi en muhtemel tek jetonu tahmin eder. Bu, olasılıksal bir süreçtir ve model, kelime dağarcığından en yüksek olasılığa sahip jetonu seçer. Devasa ölçekte bir otomatik tamamlama sistemidir.",
+                                    examples: [
+                                        "Girdi: 'Fransa'nın başkenti neresidir?' Model bir sonraki jeton olarak 'Paris'i çok yüksek bir olasılıkla tahmin eder.",
+                                        "Bir yaratıcı yazım ipucu olan 'Bir zamanlar...' ifadesi, modelin bir sonraki en olası jeton olarak 'vardı' veya 'bir' kelimesini tahmin etmesini sağlar."
+                                    ],
+                                    demo: true
+                                }
+                            },
+                            {
+                                id: "llm-6",
+                                name: "Çıktı Oluşturma",
+                                icon: "🏗️",
+                                details: {
+                                    title: "Çıktı Oluşturma",
+                                    desc: "Tahmin edilen jeton diziye eklenir ve süreç tekrarlanır. Model, bir durdurma koşulu (bir nokta veya özel bir jeton gibi) karşılanana kadar birer birer jeton tahmin etmeye devam eder. Bu yinelemeli, jeton bazlı süreç, tam yanıtı oluşturur.",
+                                    examples: [
+                                        "Başlangıç: 'Fransa'nın başkenti '",
+                                        "Adım 1: Model 'Paris'i tahmin eder.",
+                                        "Adım 2: Model '.' noktasını tahmin eder. Süreç durur."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "llm-7",
+                                name: "Geri Bildirim",
+                                icon: "🔄",
+                                details: {
+                                    title: "Geri Bildirim Döngüsü",
+                                    desc: "Son adım, insan kullanıcının oluşturulan çıktı hakkında geri bildirim sağlamasını içerir. Bu geri bildirim, insan geri bildiriminden pekiştirmeli öğrenme (RLHF) yoluyla modelin davranışını insan tercihlerine ve güvenlik yönergelerine uyarlamaya yardımcı olduğu için modelin iyileştirilmesi için çok önemlidir.",
+                                    examples: [
+                                        "Bir kullanıcı yanıta bir beğeni veya beğenmeme işareti verir, bu da modelin neyin 'iyi' veya 'kötü' olarak kabul edildiğini öğrenmesine yardımcı olur.",
+                                        "Bir insan metin açıklayıcı, bir eğitim veri kümesi için düzeltilmiş, daha yararlı bir yanıt sağlar ve modele daha iyi konuşma kalıplarını öğretir."
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    genai: {
+                        title: "Üretken Yapay Zeka",
+                        intro: "Üretken Yapay Zeka, LLM'leri yüksek kaliteli, uzun biçimli içerik oluşturmaya odaklanarak bir adım daha ileri götürür. Geniş bir istemi eksiksiz, tutarlı ve genellikle yaratıcı bir çıktıya dönüştürmekle ilgilidir. Basit LLM'lerin aksine, bir istemden tam bir yapıt oluşturmak için tasarlanmıştır.",
+                        steps: [
+                            {
+                                id: "genai-1",
+                                name: "Girdi Toplama",
+                                icon: "✍️",
+                                details: {
+                                    title: "Girdi Toplama",
+                                    desc: "Bu, ilk kullanıcı istemidir. Basit LLM girdilerinden farklı olarak, genellikle daha yapılandırılmıştır ve belirli gereksinimleri, bağlamı ve istenen çıktı biçimini içerir (örn. 'Edgar Allan Poe tarzında kısa bir hikaye yaz').",
+                                    examples: [
+                                        "Bir kullanıcı şu şekilde bir istem sağlar: 'Verimlilik ve işbirliğine odaklanarak uzaktan çalışmanın faydaları hakkında bir blog yazısı yaz.'",
+                                        "Bir sanatçı bir görüntü oluşturucuya bir metin istemi girer: 'uçan arabalarla dolu fütüristik bir şehrin suluboya tablosu'."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "genai-2",
+                                name: "Özellik Eşleme",
+                                icon: "🗺️",
+                                details: {
+                                    title: "Özellik Eşleme",
+                                    desc: "Sistem, anahtar özellikleri ve varlıkları tanımlamak için girdiyi analiz eder. Bunları modelin dahili temsil alanına eşler ve istenen çıktının stilini, tonunu ve kısıtlamalarını belirler. Bu, üretim sürecinin planıdır.",
+                                    examples: [
+                                        "Blog yazısı istemi için model, 'blog yazısı', 'uzaktan çalışma', 'verimlilik' ve 'işbirliği' gibi anahtar kelimeleri ve bunların ilişkilerini tanımlar.",
+                                        "Bir görüntü isteminde, 'suluboya'yı belirli bir sanatsal stile ve 'fütüristik şehir'i bir dizi görsel kavrama eşler ve soyut fikirleri veri noktalarına dönüştürür."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "genai-3",
+                                name: "Örüntü Öğrenme",
+                                icon: "📊",
+                                details: {
+                                    title: "Örüntü Öğrenme",
+                                    desc: "Üretken model, çeşitli veri kümeleri üzerinde yaptığı kapsamlı eğitim sırasında öğrendiği örüntülerden yararlanır. Belirli özelliklerin (örn. blog yazısı yapısı, ikna edici ton) belirli çıktılarla nasıl ilişkili olduğunu tanır ve bu bilgiyi yeni bir içerik parçası oluşturmak için uygular.",
+                                    examples: [
+                                        "Model, çıktıyı organize etmek için bir blog yazısının tipik yapısını (giriş, gövde paragrafları, sonuç) hatırlar.",
+                                        "'İkna edici bir ton'un 'keşfet', 'hayal et' ve 'dönüştür' gibi kelimelerin kullanılmasını gerektirdiğini bilir ve dili buna göre yapılandırır."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "genai-4",
+                                name: "Eğitimli Modellerden Yararlanma",
+                                icon: "🚀",
+                                details: {
+                                    title: "Eğitimli Modellerden Yararlanma",
+                                    desc: "Bu aşama, önceden eğitilmiş LLM'nin tam bir taslak oluşturmak için kullanıldığı çekirdek üretim sürecidir. Burası, tek bir jeton tahmininin ötesine geçerek, ilk istem ve öğrendiği örüntüler üzerine inşa ederek tutarlı, çok paragraflı veya çok cümleli bir yanıt oluşturduğu yerdir.",
+                                    examples: [
+                                        "Model, tanımlanan özelliklere dayanarak tam bir makale taslağı oluşturur ve bir fikirden diğerine akış sağlar.",
+                                        "Bir görüntü modeli, metin isteminden tam bir görüntü oluşturur ve talep edildiği gibi farklı sanatsal stilleri ve nesneleri harmanlar."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "genai-5",
+                                name: "İçerik Oluşturma",
+                                icon: "✨",
+                                details: {
+                                    title: "İçerik Oluşturma",
+                                    desc: "The model iteratively generates the content, building on its previous tokens. This is where the creative output takes shape, from the first sentence of an email to the final paragraph of a report. The process is guided by the internal state of the model and the features identified in the input.",
+                                    examples: [
+                                        "The model starts with an introduction, then moves to a section on 'Productivity Benefits', then 'Collaboration Tools', and finally a summary, all in one seamless process.",
+                                        "A user asks for a summary of a document, and the model generates a concise, readable abstract by condensing key information."
+                                    ],
+                                    demo: true
+                                }
+                            },
+                            {
+                                id: "genai-6",
+                                name: "İyileştirme & Filtreleme",
+                                icon: "🧹",
+                                details: {
+                                    title: "İyileştirme & Filtreleme",
+                                    desc: "İlk oluşturmadan sonra, çıktının kalite standartlarını karşıladığından emin olmak için gözden geçirilir. Bu, tutarlılık, dilbilgisi ve istemin kısıtlamalarına uyum kontrollerini içerebilir. Ayrıca uygunsuz veya önyargılı içeriği de filtreleyebilir, bu da güvenlik ve etik dağıtım için kritik bir adımdır.",
+                                    examples: [
+                                        "Modelin çıktısı dilbilgisi hataları ve garip ifadeler için kontrol edilir ve gerekirse düzeltilir.",
+                                        "Bir güvenlik filtresi, oluşturulan metni kullanıcıya sunmadan önce zararlı veya önyargılı içerik açısından tarar, güvenli ve sorumlu bir çıktı sağlar."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "genai-7",
+                                name: "Kullanıcı Geri Bildirimi",
+                                icon: "👍",
+                                details: {
+                                    title: "Kullanıcı Geri Bildirim Döngüsü",
+                                    desc: "LLM'lerde olduğu gibi, kullanıcı geri bildirimi de hayati önem taşır. Üretken yapay zeka sistemleri genellikle kullanıcıların çıktıları derecelendirmesi, iyileştirmesi veya düzenlemeler önermesi için seçenekler sunar. Bu geri bildirim, modeli daha da ince ayar yapmak ve belirli görevlerdeki performansını artırmak için kullanılır.",
+                                    examples: [
+                                        "Bir kullanıcı, daha doğal gelen bir paragrafın farklı bir sürümünü almak için 'yeniden yaz' düğmesine tıklar.",
+                                        "Bir tasarımcı, bir yapay zeka tarafından oluşturulan görüntüyü ayrıntılı olarak eleştirerek bir sonraki yinelemede neyin değiştirileceğini belirtir, bu da modelin daha iyi sanat üretmeyi öğrenmesine yardımcı olur."
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    agents: {
+                        title: "Yapay Zeka Ajanları",
+                        intro: "Yapay Zeka Ajanları bir paradigma değişikliğidir. Tek bir istem-yanıt döngüsünün ötesine geçerler. Harici araçları kullanarak belirli bir görevi başarmak için plan yapabilir, yürütebilir ve yineleyebilirler. Bir ajan, bir hedefe ulaşmak için muhakeme, eylem ve ortamı gözlemleme yeteneğine sahip bir sistemdir.",
+                        steps: [
+                            {
+                                id: "agents-1",
+                                name: "Görev Tetiklenmesi",
+                                icon: "▶️",
+                                details: {
+                                    title: "Görev Tetiklenmesi",
+                                    desc: "Bir Yapay Zeka Ajanının süreci, tamamlanması birden fazla adım gerektiren belirli bir görev veya kullanıcı komutu aldığında başlar. Bu, ajan için bir 'eylem çağrısıdır' ve karmaşık bir iş akışını başlatır.",
+                                    examples: [
+                                        "Kullanıcı girdisi: 'Bana gelecek ay için New York'tan Londra'ya en ucuz uçak biletlerini bul.' Bu, açık, çok adımlı bir görevdir.",
+                                        "Kullanıcı girdisi: 'Yeni ürün lansmanımız hakkında bir sosyal medya gönderisi oluştur.' Bu, araştırma, içerik oluşturma ve planlama gerektirir."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agents-2",
+                                name: "Niyet Tespiti",
+                                icon: "🔍",
+                                details: {
+                                    title: "Niyet Tespiti",
+                                    desc: "Ajan önce kullanıcının temel niyetini anlamak için girdiyi analiz eder. Komutu yapılandırılmış bir hedefe ayırır ve anahtar parametreleri (örn. kalkış, varış, tarih aralığı) belirler. Bu, planlama için çok önemli bir ilk adımdır.",
+                                    examples: [
+                                        "Uçuş isteği için ajan, niyeti 'uçuş bulma' olarak tanımlar ve parametreleri çıkarır: 'kalkış=NYC', 'varış=Londra', 'tarihler=gelecek ay'.",
+                                        "Sosyal medya gönderisi için niyet, 'ürün=yeni_ürün', 'platform=sosyal_medya' parametreleriyle 'içerik oluşturma'dır."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agents-3",
+                                name: "Görev Türünü Anlama",
+                                icon: "📝",
+                                details: {
+                                    title: "Görev Türünü Anlama",
+                                    desc: "Niyete dayanarak ajan, görevi (örn. veri alma, içerik oluşturma, planlama) kategorize eder. Bu kategorizasyon, görevi tamamlamak için hangi harici araçları kullanması gerektiği konusunda bilgi verir.",
+                                    examples: [
+                                        "Bir uçuş isteği, 'veri alma ve karşılaştırma' görevi olarak sınıflandırılır, bu da bir uçuş rezervasyon hizmetine API çağrısı gerektirir.",
+                                        "Bir planlama isteği, bir takvim hizmetine bağlantı gerektiren 'planlama ve API entegrasyonu' görevi olarak sınıflandırılır."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agents-4",
+                                name: "Rol / Model Yürütme",
+                                icon: "🎭",
+                                details: {
+                                    title: "Rol / Model Yürütme",
+                                    desc: "Ajan bir 'rol üstlenir' veya görev türüne göre uyarlanmış belirli bir modeli çağırır. Örneğin, arama sorguları oluşturmak, uzun metinleri özetlemek veya ilgi çekici başlıklar oluşturmak için uzmanlaşmış bir alt model kullanabilir.",
+                                    examples: [
+                                        "Uçuş araması için ajan, `api/flights?from=NYC&to=LON&date=2025-09` gibi geçerli bir API isteği dizesi oluşturmak için bir arama sorgusu oluşturma modeli kullanır.",
+                                        "Sosyal medya gönderisi için, tonun platform için uygun olmasını sağlayan 'sosyal medya yöneticisi' kişiliğine sahip bir içerik oluşturma modeli kullanır."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agents-5",
+                                name: "Araç veya API Çağrısı",
+                                icon: "⚙️",
+                                details: {
+                                    title: "Araç veya API Çağrısı",
+                                    desc: "Bu, bir ajanın temel yeteneğidir. Yalnızca metin oluşturmak yerine, gerçek dünyada bir eylem gerçekleştirmek ve bilgi toplamak için harici bir aracı veya API'yi (örn. bir uçuş arama API'si, bir takvim API'si, bir web kazıyıcı) çağırır. Dijital dünya ile fiziksel dünya arasındaki köprüdür.",
+                                    examples: [
+                                        "Ajan, çıkarılan parametrelerle bir uçuş veri tabanı API'sine cURL komutu yürütür.",
+                                        "Sosyal medya gönderisini yazmadan önce en son ürün bilgilerini bulmak için bir web arama aracını çağırır."
+                                    ],
+                                    demo: true
+                                }
+                            },
+                            {
+                                id: "agents-6",
+                                name: "Araçlarla Etkileşim",
+                                icon: "🤝",
+                                details: {
+                                    title: "Araçlarla Etkileşim",
+                                    desc: "Ajan, araç çağrısından elde edilen sonucu işler. Bu, bir API'den JSON verilerini okumayı, bir web sitesinden HTML'yi ayrıştırmayı veya başka bir modelin çıktısını anlamayı içerebilir. Bu, hedef karşılanana kadar araçları çağırma ve sonuçları işleme döngüsüdür.",
+                                    examples: [
+                                        "Ajan, uçuş API'sinden uçuşlar, fiyatlar ve aktarmaları içeren bir JSON yanıtı alır. Daha sonra bir yanıt oluşturmak için ilgili verileri çıkarır.",
+                                        "Bir satış raporu özeti oluşturmadan önce ürün satış verilerini almak için bir CSV dosyasını okur."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agents-7",
+                                name: "Yanıt İşleme",
+                                icon: "📤",
+                                details: {
+                                    title: "Yanıt İşleme",
+                                    desc: "Gerekli tüm bilgileri topladıktan sonra, ajan sonuçları insan tarafından okunabilir bir yanıta sentezler. Verileri açıkça biçimlendirir ve kullanıcıya hem özlü hem de kapsamlı bir şekilde sunar.",
+                                    examples: [
+                                        "Ajan, uçuş listesini alır ve bunları biçimlendirilmiş bir liste halinde sunar: 'İşte en ucuz uçuşlar: [Uçuş 1], [Uçuş 2]...'.",
+                                        "Toplanan ürün detaylarından nihai sosyal medya gönderisini oluşturur, mesajın ilgi çekici ve marka ile uyumlu olmasını sağlar."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agents-8",
+                                name: "Görev Kaydı",
+                                icon: "📜",
+                                details: {
+                                    title: "Görev Kaydı",
+                                    desc: "Ajanlar genellikle, ilk istem, çağırdıkları araçlar, kullanılan parametreler ve nihai çıktı dahil olmak üzere eylemlerinin bir günlüğünü tutar. Bu, hata ayıklama, denetleme ve sürekli iyileştirme için çok önemlidir ve ajanın karar verme sürecinin şeffaf bir kaydını sağlar.",
+                                    examples: [
+                                        "Ajan, tüm arama sürecini kaydeder: 'Uçuş API'si çağrıldı -> Veri alındı -> Fiyata göre filtrelendi -> Yanıt oluşturuldu.'",
+                                        "Bir kullanıcının geçmiş sorguları ve ajanın eylemleri, gelecekteki referans ve kişiselleştirme için saklanır, böylece ajanın geçmiş etkileşimlerden öğrenmesine olanak tanır."
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    agentic: {
+                        title: "Ajan-Temelli Yapay Zeka",
+                        intro: "Ajan-Temelli Yapay Zeka, en yüksek özerklik seviyesini temsil eder. Sadece tek bir görevi yerine getirmekle ilgili değildir; bir hedefi başlatmak, ilerlemeyi sürekli izlemek ve onu başarmak için otonom olarak uyum sağlamakla ilgilidir. Kendini düzelten, hedef odaklı bir sistemdir.",
+                        steps: [
+                            {
+                                id: "agentic-1",
+                                name: "Hedef Başlatma",
+                                icon: "🏁",
+                                details: {
+                                    title: "Hedef Başlatma",
+                                    desc: "Basit bir görev tetikleyicisinin aksine, Ajan-Temelli Yapay Zeka genellikle üst düzey, belirsiz bir hedefle başlar. Ajan, bunu bir dizi eyleme dönüştürülebilir, somut alt göreve ayırmaktan sorumludur. Bu, 'uçuş bulma' ile 'seyahatimi yönetme' arasındaki farktır.",
+                                    examples: [
+                                        "Hedef: 'Çevrimiçi varlığımızı büyüt.' Bu, uzun vadeli, çok yönlü bir hedeftir.",
+                                        "Hedef: 'Müşteri memnuniyetini artır.' Bu, proaktif, sürekli bir yaklaşım gerektirir."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agentic-2",
+                                name: "Hedefi Alma veya Tanımlama",
+                                icon: "🎯",
+                                details: {
+                                    title: "Hedefi Alma veya Tanımlama",
+                                    desc: "Ajan, üst düzey hedefi ölçülebilir bir hedefe dönüştürür. Açıklama isteyebilir veya belirli bir hedef (örn. 'Dördüncü çeyrekte web sitesi trafiğini %15 artır') belirlemek için bilgisini kullanabilir. Bu, soyut bir fikri somut bir ölçüme dönüştürür.",
+                                    examples: [
+                                        "'Çevrimiçi varlığımızı büyüt' için ajan, hedefi tanımlar: 'Günde 3 kez gönderi paylaşarak üçüncü çeyrekte Twitter'da 1000 yeni takipçi kazan.'",
+                                        "'Müşteri memnuniyetini artır'ı 'ortalama müşteri desteği yanıt süresini, ortak sorguları otomatikleştirerek 1 saatin altına düşür' olarak tanımlar."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agentic-3",
+                                name: "Bağlamı Anlama",
+                                icon: "🌐",
+                                details: {
+                                    title: "Bağlamı Anlama",
+                                    desc: "Ajan, mevcut durumu tam olarak anlamak için çok çeşitli gerçek zamanlı verileri alır ve analiz eder. Bu, dahili verileri (web sitesi analizleri, satış verileri), pazar eğilimlerini, rakip etkinliğini ve kullanıcı davranışını içerir. Bu, ortamın sürekli, 360 derecelik bir görünümüdür.",
+                                    examples: [
+                                        "Ajan, mevcut performansı belirlemek için web sitesi analizlerini, sosyal medya bahslerini ve son satış verilerini analiz eder.",
+                                        "Rekabet ortamını anlamak ve yeni fırsatları veya tehditleri belirlemek için haber makalelerini ve endüstri raporlarını okur."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agentic-4",
+                                name: "Muhakeme",
+                                icon: "🤔",
+                                details: {
+                                    title: "Muhakeme (Planlama & Strateji)",
+                                    desc: "Bu, Ajan-Temelli Yapay Zekanın çekirdeğidir. Ajan, bağlam anlayışını en iyi eylem yolu hakkında muhakeme etmek için kullanır. Potansiyel sorunları öngörerek ve olasılıkları belirterek çok adımlı, dinamik bir plan oluşturur. Bu, basit bir görev dökümünden daha üst düzey bir fonksiyondur.",
+                                    examples: [
+                                        "Twitter takipçi hedefi için ajan şöyle muhakeme eder: 'Planım, trend konuları bulmak, 20 ilgi çekici gönderi taslağı hazırlamak ve onları planlamak. Etkileşimi de izleyeceğim ve düşükse video içerik stratejisine geçeceğim.'",
+                                        "Ajan bir destek birikimini tespit eder ve en iyi planın 'otomatik SSS yanıtları oluşturmak ve anahtar kelime analizine dayanarak acil biletlere öncelik vermek' olduğuna karar verir."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agentic-5",
+                                name: "Otonom Yürütme",
+                                icon: "🤖",
+                                details: {
+                                    title: "Otonom Yürütme",
+                                    desc: "Ajan, planı insan müdahalesi olmadan yürütür. Kendi başına araçları çağırır, API'lerle etkileşime girer ve eylemleri gerçekleştirir, tüm iş akışını baştan sona yönetir. Burası, bir 'yardımcı' olmaktan gerçek bir 'yapan' olmaya geçtiği yerdir.",
+                                    examples: [
+                                        "Ajan, sosyal medya gönderilerini yazar, bir planlayıcı API'ye (Hootsuite gibi) bağlanır ve içeriği en uygun zamanlarda otomatik olarak yayınlar.",
+                                        "Ortak sorgulara otomatik yanıtlar oluşturmak ve göndermek için bir destek biletleme API'si kullanır, böylece insan ajanları karmaşık sorunlar için serbest bırakır."
+                                    ],
+                                    demo: true
+                                }
+                            },
+                            {
+                                id: "agentic-6",
+                                name: "Gerçek Zamanlı İzleme",
+                                icon: "📊",
+                                details: {
+                                    title: "Gerçek Zamanlı İzleme",
+                                    desc: "Ajan, temel performans göstergelerini (KPI'lar) gerçek zamanlı olarak sürekli izler. Sadece planı yürütüp durmaz; planın işe yarayıp yaramadığını görmek için sonuçları izler. Bu, proaktif, sürekli bir geri bildirim döngüsüdür.",
+                                    examples: [
+                                        "Twitter'daki yeni takipçi sayısını saatlik olarak ve her bir gönderinin retweet ve beğeni sayısını takip eder.",
+                                        "Ortalama destek bileti yanıt süresini ve günlük kapatılan bilet sayısını izler ve tanımlanan hedeflerle karşılaştırır."
+                                    ]
+                                }
+                            },
+                            {
+                                id: "agentic-7",
+                                name: "Sonuç Değerlendirmesi & Adaptasyon",
+                                icon: "✅",
+                                details: {
+                                    title: "Sonuç Değerlendirmesi & Adaptasyon",
+                                    desc: "İzleme verilerine dayanarak, ajan hedefin karşılanıp karşılanmadığını değerlendirir. Sonuç beklendiği gibi değilse, otonom olarak muhakeme aşamasına geri dönebilir, yeniden plan yapabilir ve yeni bir yaklaşım deneyebilir. Bu kendi kendini düzeltme yeteneği, onu gerçekten 'ajan-temelli' yapan şeydir.",
+                                    examples: [
+                                        "Takipçiler artmıyorsa, ajan yeniden değerlendirir: 'İlk içerik stratejim işe yaramıyor. Şimdi video içeriğine ve sponsorlu gönderilere odaklanan yeni bir yaklaşım deneyeceğim.'",
+                                        "Yanıt süresi hala çok yavaşsa, ajan belirli bilet türlerini belirli ekiplere yeniden yönlendirmeye veya yanıt sürecinin daha fazlasını otomatikleştirmeye karar verebilir."
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        };
+        
+        const langToggleBtn = document.getElementById('lang-toggle');
+        const mainTitle = document.getElementById('main-title');
+        const mainSubtitle = document.getElementById('main-subtitle');
+        const cardContainer = document.getElementById('card-container');
+        const footerText = document.getElementById('footer-text');
+        const modal = document.getElementById('modal');
+        const modalCloseBtn = document.getElementById('modal-close');
+        const modalBody = document.getElementById('modal-body');
+        
+        let currentLang = 'tr';
+
+        function updateContent() {
+            const langContent = contentData[currentLang];
+            mainTitle.textContent = langContent.title;
+            mainSubtitle.textContent = langContent.subtitle;
+            footerText.innerHTML = langContent.footer + ` <a href="https://www.linkedin.com/in/ayhanbozkurt/" target="_blank">Ayhan Bozkurt</a>. <br> <a href="https://github.com/ayhanbzkrt" target="_blank">${langContent.github}</a>`;
+            renderCards(langContent.cards);
+        }
+
+        function renderCards(cards) {
+            cardContainer.innerHTML = '';
+            const cardOrder = ['llm', 'genai', 'agents', 'agentic'];
+            cardOrder.forEach(key => {
+                const card = cards[key];
+                const cardDiv = document.createElement('div');
+                cardDiv.className = `card card-${key}`;
+                cardDiv.dataset.cardId = key;
+                cardDiv.innerHTML = `
+                    <h2 style="color: var(--card-${key});">${card.title}</h2>
+                    <p>${card.intro.split('.')[0]}.</p>
+                    <ul>
+                        ${card.steps.map(step => `<li>${step.name}</li>`).join('')}
+                    </ul>
+                `;
+                cardContainer.appendChild(cardDiv);
+            });
+            addCardListeners();
+        }
+
+        function addCardListeners() {
+            document.querySelectorAll('.card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    const cardId = e.currentTarget.dataset.cardId;
+                    renderModalContent(cardId);
+                    modal.classList.add('open');
+                });
+            });
+        }
+
+        function renderModalContent(cardId) {
+            const langContent = contentData[currentLang];
+            const cardContent = langContent.cards[cardId];
+            const colorVar = `var(--card-${cardId})`;
+
+            modalBody.innerHTML = `
+                <h2 style="color: ${colorVar};">${cardContent.title}</h2>
+                <p>${cardContent.intro}</p>
+                ${cardContent.steps.map(step => `
+                    <div class="modal-step" data-step-id="${step.id}" data-card-id="${cardId}">
+                        <div class="step-header">
+                            <div><span class="icon">${step.icon}</span> ${step.name}</div>
+                            <span class="arrow">▼</span>
+                        </div>
+                        <div class="step-content">
+                            <div class="content-box">
+                                <h3 style="color: ${colorVar};">${step.details.title}</h3>
+                                <p>${step.details.desc}</p>
+                                <h4>${langContent.example}s:</h4>
+                                <ul>
+                                    ${step.details.examples.map(ex => `<li>${ex}</li>`).join('')}
+                                </ul>
+                            </div>
+                            ${step.details.demo ? `
+                                <div class="content-box">
+                                    <h3 style="color: ${colorVar};">${langContent.demo}</h3>
+                                    <div class="demo-area" data-demo-id="${step.id}">
+                                        ${getDemoHTML(step.id, colorVar)}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+            addStepListeners(colorVar);
+        }
+        
+        function getDemoHTML(demoId, color) {
+            switch (demoId) {
+                case 'llm-5':
+                    return `
+                        <p>${currentLang === 'tr' ? 'Girdi:' : 'Input:'} <b>"The best way to learn to code is to..."</b></p>
+                        <div class="input-group">
+                            <button onclick="runDemo('llm-5', '${color}')">${currentLang === 'tr' ? 'Bir Sonraki Jetonu Tahmin Et' : 'Predict Next Token'}</button>
+                        </div>
+                        <div class="demo-output" style="border-color: ${color};"></div>
+                    `;
+                case 'genai-5':
+                    return `
+                        <p>${currentLang === 'tr' ? 'Girdi:' : 'Input:'} <b>"Write a short story about a detective robot in a cyberpunk city."</b></p>
+                        <div class="input-group">
+                            <button onclick="runDemo('genai-5', '${color}')">${currentLang === 'tr' ? 'İçerik Oluştur' : 'Generate Content'}</button>
+                        </div>
+                        <div class="demo-output" style="border-color: ${color};"></div>
+                    `;
+                case 'agents-5':
+                    return `
+                        <p>${currentLang === 'tr' ? 'Girdi:' : 'Input:'} <b>"Search for the weather in Ankara tomorrow."</b></p>
+                        <div class="input-group">
+                            <button onclick="runDemo('agents-5', '${color}')">${currentLang === 'tr' ? 'API Çağrısını Simüle Et' : 'Simulate API Call'}</button>
+                        </div>
+                        <div class="demo-output" style="border-color: ${color};"></div>
+                    `;
+                case 'agentic-5':
+                    return `
+                        <p>${currentLang === 'tr' ? 'Hedef:' : 'Goal:'} <b>"Improve my website's SEO."</b></p>
+                        <div class="input-group">
+                            <button onclick="runDemo('agentic-5', '${color}')">${currentLang === 'tr' ? 'Otonom Yürütmeyi Başlat' : 'Start Autonomous Execution'}</button>
+                        </div>
+                        <div class="demo-output" style="border-color: ${color};"></div>
+                    `;
+                default:
+                    return '';
+            }
+        }
+        
+        function runDemo(demoId, color) {
+            const output = document.querySelector(`.demo-area[data-demo-id="${demoId}"] .demo-output`);
+            output.style.opacity = 0;
+            
+            let sentences = [];
+            let isTyping = false;
+
+            if (isTyping) return;
+            isTyping = true;
+            
+            output.innerHTML = '';
+
+            switch (demoId) {
+                case 'llm-5':
+                    sentences = ["'start'", "'a'", "'small'", "'project'"];
+                    break;
+                case 'genai-5':
+                    sentences = [
+                        `${currentLang === 'tr' ? 'Neo-Kyoto\'nun neon ışıkları, yağmurdan ıslanmış sokaklardan yansıyordu. Dedektif Ünite 7, krom kaplı bir android, pardösüsünü düzeltti.' : 'The neon lights of Neo-Kyoto reflected off the rain-slicked streets. Detective Unit 7, a chrome-plated android, adjusted his trench coat.'}`,
+                        `${currentLang === 'tr' ? "'Yine bir kayıp sentetik evcil hayvan,' diye mırıldandı kimseye. Optik sensörleri, ipucu aramak için yanıp sönen holografik reklamları taradı." : "'Another missing synth-pet,' he muttered to no one in particular. His optical sensors scanned the flickering holographic advertisements, searching for a clue."}`,
+                        `${currentLang === 'tr' ? "Bu davanın uzun süreceğini biliyordu." : "He knew this case was going to be a long one."}`
+                    ];
+                    break;
+                case 'agents-5':
+                    sentences = [
+                        `${currentLang === 'tr' ? 'Ajan, niyeti tespit ediyor: ' : 'The agent detects the intent: '}'<b>${currentLang === 'tr' ? 'hava durumu araması' : 'weather search'}</b>'.`,
+                        `${currentLang === 'tr' ? 'Ankara için hava durumu API\'sini çağırıyor ve JSON verisi alıyor.' : 'It calls the weather API for Ankara and receives JSON data.'}`,
+                        `${currentLang === 'tr' ? 'Çıktı, kullanıcıya biçimlendirilmiş bir yanıt olarak sunuluyor:' : 'The output is a formatted response to the user:'} '<b>${currentLang === 'tr' ? 'Ankara, Türkiye: Yarının tahmini parçalı bulutlu, en yüksek sıcaklık 28°C ve en düşük sıcaklık 16°C.' : 'Ankara, Turkey: Tomorrow\'s forecast is partly cloudy with a high of 28°C and a low of 16°C.'}</b>'`
+                    ];
+                    break;
+                case 'agentic-5':
+                    sentences = [
+                        `${currentLang === 'tr' ? '<b>Adım 1: Muhakeme.</b> Ajan, hedefi analiz eder ve bir plan oluşturur:' : '<b>Step 1: Reasoning.</b> The agent analyzes the goal and creates a plan:'}`,
+                        `1. ${currentLang === 'tr' ? 'Sektörüm için en iyi anahtar kelimeleri araştır.' : 'Research top keywords for my industry.'}`,
+                        `2. ${currentLang === 'tr' ? 'Rakip backlinklerini analiz et.' : 'Analyze competitor backlinks.'}`,
+                        `3. ${currentLang === 'tr' ? 'Sitemdeki içerik boşluklarını belirle.' : 'Identify content gaps on my site.'}`,
+                        `4. ${currentLang === 'tr' ? 'Bu anahtar kelimeler için yeni blog yazıları oluştur.' : 'Generate new blog posts for those keywords.'}`,
+                        `5. ${currentLang === 'tr' ? 'Sosyal medyada tanıtımı planla.' : 'Schedule promotion on social media.'}`,
+                        `<br>`,
+                        `${currentLang === 'tr' ? '<b>Adım 2: Otonom Yürütme.</b> Ajan, planı yürütmek için çeşitli araçları (Google Trends API, SEO analiz araçları, içerik oluşturma modelleri) çağırmaya başlar. Hedef ulaşılana kadar ilerlemeyi izlemeye devam edecektir.' : '<b>Step 2: Autonomous Execution.</b> The agent begins calling various tools (Google Trends API, SEO analysis tools, content generation models) to execute the plan. It will continue to monitor progress until the goal is achieved.'}`
+                    ];
+                    break;
+            }
+            
+            setTimeout(() => {
+                output.style.opacity = 1;
+                let i = 0;
+                function typeWriter() {
+                    if (i < sentences.length) {
+                        output.innerHTML += sentences[i] + '<br>';
+                        i++;
+                        setTimeout(typeWriter, 1200);
+                    } else {
+                        isTyping = false;
+                    }
+                }
+                typeWriter();
+            }, 300);
+        }
+
+        function addStepListeners(color) {
+            document.querySelectorAll('.modal-step').forEach(step => {
+                const stepHeader = step.querySelector('.step-header');
+                const stepContent = step.querySelector('.step-content');
+                const title = step.querySelector('.content-box h3');
+                if (title) title.style.color = color;
+                
+                const demoOutput = step.querySelector('.demo-output');
+                if (demoOutput) demoOutput.style.borderColor = color;
+                const demoButton = step.querySelector('.demo-area button');
+                if (demoButton) demoButton.style.background = color;
+
+                stepHeader.addEventListener('click', () => {
+                    const isActive = step.classList.contains('active');
+                    document.querySelectorAll('.modal-step').forEach(s => s.classList.remove('active'));
+                    if (!isActive) {
+                        step.classList.add('active');
+                    }
+                });
+            });
+        }
+
+        // Language toggle event
+        langToggleBtn.addEventListener('click', () => {
+            currentLang = currentLang === 'tr' ? 'en' : 'tr';
+            updateContent();
+        });
+
+        // Modal close event
+        modalCloseBtn.addEventListener('click', () => {
+            modal.classList.remove('open');
+        });
+        
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                modal.classList.remove('open');
+            }
+        });
+
+        // Initial content load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateContent();
+        });
+    </script>
+</body>
+</html>
